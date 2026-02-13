@@ -8,7 +8,7 @@ from botocore.exceptions import ClientError
 
 # Configuration - moved inside to ensure region is applied
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE', 'DailyMotivationalQuotes')
-AWS_REGION = os.environ.get('AWS_REGION', 'us-east-2')
+AWS_REGION = os.environ.get('AWS_REGION', 'ap-south-1')
 
 # Initialize resource with the specified region
 dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
