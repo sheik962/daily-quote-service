@@ -96,4 +96,3 @@ Generated Quote ID: {quote_id}")
 if __name__ == '__main__':
     main()
 
-
