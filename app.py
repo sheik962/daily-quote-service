@@ -1,98 +1,54 @@
-
 import boto3
 import os
 import json
-from datetime import datetime
 import uuid
 import random
+from datetime import datetime
+from botocore.exceptions import ClientError
 
-# Initialize AWS clients
-dynamodb = boto3.resource('dynamodb')
-
-# Configuration
+# Configuration - moved inside to ensure region is applied
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE', 'DailyMotivationalQuotes')
 AWS_REGION = os.environ.get('AWS_REGION', 'us-east-2')
 
-# Sample motivational quotes
+# Initialize resource with the specified region
+dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
+
 QUOTES = [
     "The only way to do great work is to love what you do. - Steve Jobs",
     "Believe you can and you're halfway there. - Theodore Roosevelt",
-    "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
-    "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
-    "It does not matter how slowly you go as long as you do not stop. - Confucius",
-    "Start where you are. Use what you have. Do what you can. - Arthur Ashe",
-    "The only impossible journey is the one you never begin. - Tony Robbins",
-    "Everything you've ever wanted is on the other side of fear. - George Addair"
+    "Success is not final, failure is not fatal... - Winston Churchill"
 ]
 
-def get_random_quote():
-    """Select a random motivational quote"""
-    return random.choice(QUOTES)
-
 def store_quote_in_dynamodb(quote_id, quote, sent_date):
-    """Store the quote in DynamoDB table"""
     try:
         table = dynamodb.Table(TABLE_NAME)
-        
-        item = {
+        table.put_item(Item={
             'QuoteID': quote_id,
             'SentDate': sent_date,
             'Quote': quote,
             'Timestamp': datetime.now().isoformat()
-        }
-        
-        table.put_item(Item=item)
-        print(f"✓ Quote stored successfully in DynamoDB")
-        print(f"  QuoteID: {quote_id}")
-        print(f"  SentDate: {sent_date}")
-        print(f"  Quote: {quote}")
+        })
+        print(f"✓ Quote stored: {quote_id}")
         return True
-        
-    except Exception as e:
-        print(f"✗ Error storing quote in DynamoDB: {str(e)}")
+    except ClientError as e:
+        print(f"✗ AWS Error: {e.response['Error']['Message']}")
         raise
 
-def main():
-    """Main function to generate and store quote"""
+def main(event=None, context=None): # Added params for Lambda compatibility
     try:
-        print("=" * 60)
-        print("Daily Motivational Quote Service - Starting")
-        print("=" * 60)
-        
-        # Generate quote ID and get quote
         quote_id = str(uuid.uuid4())
-        quote = get_random_quote()
+        quote = random.choice(QUOTES)
         sent_date = datetime.now().strftime('%Y-%m-%d')
         
-        print(f"
-Generated Quote ID: {quote_id}")
-        print(f"Date: {sent_date}")
-        print(f"Quote: {quote}
-")
-        
-        # Store in DynamoDB
-        print("Storing quote in DynamoDB...")
         store_quote_in_dynamodb(quote_id, quote, sent_date)
-        
-        print("
-" + "=" * 60)
-        print("Process completed successfully!")
-        print("=" * 60)
         
         return {
             'statusCode': 200,
-            'body': json.dumps({
-                'message': 'Success',
-                'quoteId': quote_id,
-                'quote': quote
-            })
+            'body': json.dumps({'quoteId': quote_id, 'quote': quote})
         }
-        
     except Exception as e:
-        print(f"
-✗ Error in main process: {str(e)}")
-        raise
+        print(f"✗ Fatal Error: {str(e)}")
+        return {'statusCode': 500, 'body': str(e)}
 
 if __name__ == '__main__':
     main()
-
